@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meet Interpreter</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <h1>Meet Interpreter</h1>
+          <p>말하는 즉시 텍스트를 표시하고, 한국어/영어 질문은 중국어 음성으로, 중국어 답변은 한국어 음성 및 한국어/영어 텍스트로 통역합니다.</p>
+        </div>
+        <div class="controls">
+          <button id="startButton">오디오 선택</button>
+          <button id="stopButton" disabled>중지</button>
+        </div>
+      </section>
+
+      <section class="status">
+        <div>
+          <span class="label">상태</span>
+          <strong id="statusText">대기 중</strong>
+        </div>
+        <div>
+          <span class="label">캡처</span>
+          <strong id="captureText">아직 선택 안 됨</strong>
+        </div>
+        <div>
+          <span class="label">방식</span>
+          <strong>실시간</strong>
+        </div>
+      </section>
+
+      <section class="captureOptions">
+        <label>
+          <input id="includeMicInput" type="checkbox" checked />
+          내 마이크도 같이 듣기
+        </label>
+        <span>시작 전에 선택하세요. 내가 interviewer로 말하는 경우 이 옵션이 켜져 있어야 질문을 인식합니다.</span>
+      </section>
+
+      <section class="columns">
+        <article class="panel live">
+          <h2>방금 들은 내용</h2>
+          <p id="originalText" class="large muted">실시간 연결 후 원문이 바로 표시됩니다.</p>
+        </article>
+
+        <article class="panel speak">
+          <h2>중국어로 소리내기</h2>
+          <p id="chineseText" class="large muted">interviewer가 한국어/영어로 말하면 중국어 음성 번역을 재생합니다.</p>
+        </article>
+
+        <article class="panel translations">
+          <h2>중국어 답변 번역</h2>
+          <div class="translationBlock">
+            <span class="label">한국어</span>
+            <p id="koreanText" class="muted">interviewee의 중국어 답변이 한국어 텍스트와 음성으로 표시됩니다.</p>
+          </div>
+          <div class="translationBlock">
+            <span class="label">English</span>
+            <p id="englishText" class="muted">Chinese answers appear here in English.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="historyWrap">
+        <div class="historyHeader">
+          <h2>기록</h2>
+          <button id="clearButton">지우기</button>
+        </div>
+        <ol id="history"></ol>
+      </section>
+
+      <section class="tips">
+        <strong>사용법</strong>
+        <span>Chrome에서 이 페이지와 Google Meet을 각각 열고, 오디오 선택을 누른 뒤 Meet 탭을 고르세요. 선택 창에서 탭 오디오 공유가 켜져 있어야 합니다. 내가 말하는 질문까지 잡으려면 마이크 권한도 허용하세요.</span>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

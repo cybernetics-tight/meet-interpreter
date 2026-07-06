@@ -1,19 +1,8 @@
 {
   "name": "meet-interpreter",
-  "version": "1.0.0",
-  "description": "구글밋 실시간 통변역 툴 — 인터뷰어(한/영) → 중국어 음성, 인터뷰이(중국어) → 한/영 텍스트",
-  "type": "commonjs",
-  "main": "server.js",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
-  },
-  "dependencies": {
-    "@google-cloud/speech": "^6.7.0",
-    "@google-cloud/text-to-speech": "^5.6.0",
-    "@google-cloud/translate": "^8.5.0",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "ws": "^8.18.0"
+    "deploy": "vercel --prod"
   }
 }
