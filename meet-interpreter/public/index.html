@@ -1,66 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>통변역 툴 · 구글밋 인터뷰</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meet Interpreter</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <h1>통변역 툴</h1>
-      <p class="subtitle">한/영 → 중국어 음성 · 중국어 → 한/영 텍스트</p>
-    </header>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <h1>Meet Interpreter</h1>
+          <p>말하는 즉시 텍스트를 표시하고, 한국어/영어 질문은 중국어 음성으로, 중국어 답변은 한국어 음성 및 한국어/영어 텍스트로 통역합니다.</p>
+        </div>
+        <div class="controls">
+          <button id="startButton">오디오 선택</button>
+          <button id="stopButton" disabled>중지</button>
+        </div>
+      </section>
 
-    <section class="controls">
-      <div class="control-group">
-        <label for="micSelect">🎙️ 인터뷰어 마이크 (한/영 입력)</label>
-        <select id="micSelect"></select>
-      </div>
+      <section class="status">
+        <div>
+          <span class="label">상태</span>
+          <strong id="statusText">대기 중</strong>
+        </div>
+        <div>
+          <span class="label">캡처</span>
+          <strong id="captureText">아직 선택 안 됨</strong>
+        </div>
+        <div>
+          <span class="label">방식</span>
+          <strong>실시간</strong>
+        </div>
+      </section>
 
-      <div class="control-group">
-        <label for="outputSelect">🔊 중국어 TTS 출력 장치 (→ BlackHole)</label>
-        <select id="outputSelect"></select>
-      </div>
-
-      <div class="control-actions">
-        <button id="interviewerBtn" class="btn btn-primary">▶ 인터뷰어 마이크 시작</button>
-        <button id="intervieweeBtn" class="btn btn-primary">▶ 인터뷰이 캡처 시작 (밋 탭 공유)</button>
-      </div>
-
-      <div class="options">
-        <label class="checkbox">
-          <input type="checkbox" id="monitorTTS" />
-          중국어 음성 여기서도 듣기(모니터)
+      <section class="captureOptions">
+        <label>
+          <input id="includeMicInput" type="checkbox" checked />
+          내 마이크도 같이 듣기
         </label>
-      </div>
-    </section>
+        <span>시작 전에 선택하세요. 내가 interviewer로 말하는 경우 이 옵션이 켜져 있어야 질문을 인식합니다.</span>
+      </section>
 
-    <main class="panels">
-      <!-- 인터뷰어 -->
-      <div class="panel panel-interviewer">
-        <div class="panel-head">
-          <span class="dot" id="interviewerDot"></span>
-          <h2>인터뷰어 → 중국어 음성 🔈</h2>
-        </div>
-        <div class="interim" id="interviewerInterim"></div>
-        <div class="log" id="interviewerLog"></div>
-      </div>
+      <section class="columns">
+        <article class="panel live">
+          <h2>방금 들은 내용</h2>
+          <p id="originalText" class="large muted">실시간 연결 후 원문이 바로 표시됩니다.</p>
+        </article>
 
-      <!-- 인터뷰이 -->
-      <div class="panel panel-interviewee">
-        <div class="panel-head">
-          <span class="dot" id="intervieweeDot"></span>
-          <h2>인터뷰이 (중국어) → 한/영 텍스트 🔇</h2>
+        <article class="panel speak">
+          <h2>중국어로 소리내기</h2>
+          <p id="chineseText" class="large muted">interviewer가 한국어/영어로 말하면 중국어 음성 번역을 재생합니다.</p>
+        </article>
+
+        <article class="panel translations">
+          <h2>중국어 답변 번역</h2>
+          <div class="translationBlock">
+            <span class="label">한국어</span>
+            <p id="koreanText" class="muted">interviewee의 중국어 답변이 한국어 텍스트와 음성으로 표시됩니다.</p>
+          </div>
+          <div class="translationBlock">
+            <span class="label">English</span>
+            <p id="englishText" class="muted">Chinese answers appear here in English.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="historyWrap">
+        <div class="historyHeader">
+          <h2>기록</h2>
+          <button id="clearButton">지우기</button>
         </div>
-        <div class="interim" id="intervieweeInterim"></div>
-        <div class="log" id="intervieweeLog"></div>
-      </div>
+        <ol id="history"></ol>
+      </section>
+
+      <section class="tips">
+        <strong>사용법</strong>
+        <span>Chrome에서 이 페이지와 Google Meet을 각각 열고, 오디오 선택을 누른 뒤 Meet 탭을 고르세요. 선택 창에서 탭 오디오 공유가 켜져 있어야 합니다. 내가 말하는 질문까지 잡으려면 마이크 권한도 허용하세요.</span>
+      </section>
     </main>
-
-    <footer class="statusbar">
-      <span id="status">대기 중</span>
-    </footer>
 
     <script src="/app.js"></script>
   </body>
