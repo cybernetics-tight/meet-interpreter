@@ -1,8 +1,0 @@
-{
-  "name": "meet-interpreter",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "deploy": "vercel --prod"
-  }
-}
