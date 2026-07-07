@@ -1,10 +1,17 @@
 {
   "functions": {
+    "api/interpret.py": {
+      "maxDuration": 60
+    },
     "api/realtime-call.py": {
       "maxDuration": 60
     }
   },
   "rewrites": [
+    {
+      "source": "/api/interpret",
+      "destination": "/api/interpret.py"
+    },
     {
       "source": "/api/realtime-call",
       "destination": "/api/realtime-call.py"
