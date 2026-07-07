@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/realtime-call",
+      "destination": "/api/realtime-call.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
