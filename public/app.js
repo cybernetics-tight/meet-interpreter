@@ -10,7 +10,8 @@ const englishText = document.querySelector("#englishText");
 const history = document.querySelector("#history");
 const includeMicInput = document.querySelector("#includeMicInput");
 
-const CHUNK_MS = 3200;
+const CHUNK_MS = 10000;
+const SPEECH_LEVEL_THRESHOLD = 0.025;
 
 let displayStream = null;
 let micStream = null;
@@ -18,6 +19,10 @@ let audioContext = null;
 let mixedStream = null;
 let recorder = null;
 let chunkTimer = null;
+let volumeTimer = null;
+let analyser = null;
+let analyserData = null;
+let chunkPeakLevel = 0;
 let processing = false;
 let running = false;
 let audioPlayer = null;
@@ -56,6 +61,21 @@ function pickMimeType() {
   return choices.find((type) => MediaRecorder.isTypeSupported(type)) || "";
 }
 
+function connectAudioSource(source, destination) {
+  source.connect(destination);
+  if (analyser) source.connect(analyser);
+}
+
+function updatePeakLevel() {
+  if (!analyser || !analyserData) return;
+  analyser.getByteTimeDomainData(analyserData);
+  let peak = 0;
+  for (const value of analyserData) {
+    peak = Math.max(peak, Math.abs(value - 128) / 128);
+  }
+  chunkPeakLevel = Math.max(chunkPeakLevel, peak);
+}
+
 async function createMixedAudioStream() {
   setStatus("Meet 탭 선택 대기");
   displayStream = await navigator.mediaDevices.getDisplayMedia({
@@ -75,7 +95,10 @@ async function createMixedAudioStream() {
 
   audioContext = new AudioContext();
   const destination = audioContext.createMediaStreamDestination();
-  audioContext.createMediaStreamSource(new MediaStream(tabAudioTracks)).connect(destination);
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 1024;
+  analyserData = new Uint8Array(analyser.fftSize);
+  connectAudioSource(audioContext.createMediaStreamSource(new MediaStream(tabAudioTracks)), destination);
 
   let micLabel = "";
   if (includeMicInput.checked) {
@@ -89,7 +112,7 @@ async function createMixedAudioStream() {
         },
         video: false,
       });
-      audioContext.createMediaStreamSource(micStream).connect(destination);
+      connectAudioSource(audioContext.createMediaStreamSource(micStream), destination);
       micLabel = micStream.getAudioTracks()[0]?.label || "마이크";
     } catch {
       micStream = null;
@@ -152,7 +175,13 @@ async function sendChunk(blob) {
     renderResult(result);
   } catch (error) {
     setStatus("오류");
-    setText(originalText, error.message || "통역 처리에 실패했습니다.", "오류");
+    const message = String(error.message || "");
+    if (message.includes("requests per day") || message.includes("rate_limit_exceeded")) {
+      setText(originalText, "OpenAI 하루 요청 한도에 걸렸습니다. 오늘은 더 이상 받아쓰기가 어렵고, 한도가 리셋된 뒤 다시 사용할 수 있습니다.", "오류");
+      stopStableInterpreter();
+    } else {
+      setText(originalText, message || "통역 처리에 실패했습니다.", "오류");
+    }
   } finally {
     processing = false;
     if (running && statusText.textContent !== "오류") setStatus("듣는 중");
@@ -164,18 +193,24 @@ function recordNextChunk() {
 
   const mimeType = pickMimeType();
   const chunks = [];
+  chunkPeakLevel = 0;
   recorder = new MediaRecorder(mixedStream, mimeType ? { mimeType } : undefined);
   recorder.addEventListener("dataavailable", (event) => {
     if (event.data && event.data.size > 0) chunks.push(event.data);
   });
   recorder.addEventListener("stop", () => {
-    if (chunks.length) {
+    if (volumeTimer) window.clearInterval(volumeTimer);
+    volumeTimer = null;
+    if (chunks.length && chunkPeakLevel >= SPEECH_LEVEL_THRESHOLD) {
       const type = recorder.mimeType || mimeType || "audio/webm";
       sendChunk(new Blob(chunks, { type }));
+    } else if (running) {
+      setStatus("조용함 감지");
     }
     if (running) chunkTimer = window.setTimeout(recordNextChunk, 120);
   });
   recorder.start();
+  volumeTimer = window.setInterval(updatePeakLevel, 200);
   chunkTimer = window.setTimeout(() => {
     if (recorder && recorder.state === "recording") recorder.stop();
   }, CHUNK_MS);
@@ -197,6 +232,7 @@ async function startStableInterpreter() {
 function stopStableInterpreter() {
   running = false;
   if (chunkTimer) window.clearTimeout(chunkTimer);
+  if (volumeTimer) window.clearInterval(volumeTimer);
   if (recorder && recorder.state !== "inactive") recorder.stop();
   if (displayStream) displayStream.getTracks().forEach((track) => track.stop());
   if (micStream) micStream.getTracks().forEach((track) => track.stop());
@@ -209,6 +245,10 @@ function stopStableInterpreter() {
   audioContext = null;
   recorder = null;
   chunkTimer = null;
+  volumeTimer = null;
+  analyser = null;
+  analyserData = null;
+  chunkPeakLevel = 0;
   processing = false;
 
   startButton.disabled = false;
