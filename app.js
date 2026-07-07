@@ -182,16 +182,22 @@ async function createMixedAudioStream() {
   let micLabel = "";
   if (includeMicInput.checked) {
     setStatus("마이크 권한 대기");
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-      video: false,
-    });
-    audioContext.createMediaStreamSource(micStream).connect(destination);
-    micLabel = micStream.getAudioTracks()[0]?.label || "마이크";
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: false,
+      });
+      audioContext.createMediaStreamSource(micStream).connect(destination);
+      micLabel = micStream.getAudioTracks()[0]?.label || "마이크";
+    } catch (error) {
+      micStream = null;
+      includeMicInput.checked = false;
+      setText(originalText, "마이크 권한이 거부되어 Meet 탭 오디오만 듣습니다.", "알림");
+    }
   }
 
   if (audioContext.state === "suspended") await audioContext.resume();
@@ -272,7 +278,14 @@ function stopRealtime() {
 startButton.addEventListener("click", () => {
   startRealtime().catch((error) => {
     setStatus("오류");
-    setText(originalText, error.message, "오류");
+    const message = String(error.message || "");
+    if (message.includes("Permission denied") || message.includes("NotAllowedError")) {
+      setText(originalText, "브라우저에서 마이크 권한이 거부됐습니다. 주소창 왼쪽 사이트 설정에서 마이크를 허용한 뒤 다시 시도하세요.", "오류");
+    } else if (message.includes("OpenAI Realtime error 504")) {
+      setText(originalText, "OpenAI Realtime 연결이 시간 초과됐습니다. 잠시 후 다시 시도하거나 Vercel 환경변수 OPENAI_REALTIME_MODEL을 gpt-realtime-2.1로 설정했는지 확인하세요.", "오류");
+    } else {
+      setText(originalText, message, "오류");
+    }
     stopRealtime();
   });
 });
