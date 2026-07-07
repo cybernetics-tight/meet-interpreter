@@ -7,7 +7,7 @@ from urllib import error, request
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2")
+REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1")
 REALTIME_VOICE = os.environ.get("OPENAI_REALTIME_VOICE", "marin")
 
 
