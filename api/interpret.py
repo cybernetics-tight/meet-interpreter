@@ -164,8 +164,6 @@ def interpret(audio):
     result["original"] = result.get("original") or transcript
     if result.get("direction") == "ko_en_to_zh":
         result["audio"] = synthesize(result.get("zh", ""), ZH_VOICE)
-    elif result.get("direction") == "zh_to_ko_en":
-        result["audio"] = synthesize(result.get("ko", ""), KO_VOICE)
     return result
 
 

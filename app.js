@@ -10,7 +10,7 @@ const englishText = document.querySelector("#englishText");
 const history = document.querySelector("#history");
 const includeMicInput = document.querySelector("#includeMicInput");
 
-const CHUNK_MS = 10000;
+const CHUNK_MS = 4000;
 const SPEECH_LEVEL_THRESHOLD = 0.025;
 
 let displayStream = null;
@@ -151,11 +151,10 @@ function renderResult(result) {
   }
 
   if (result.direction === "zh_to_ko_en") {
-    setText(chineseText, "", "중국어 답변은 한국어 음성으로도 재생됩니다.");
+    setText(chineseText, "", "중국어 답변은 한국어/영어 텍스트로 표시됩니다.");
     setText(koreanText, result.ko || "", "한국어 번역 없음");
     setText(englishText, result.en || "", "English translation unavailable.");
-    addHistory("중국어 답변 -> 한국어 음성 + 텍스트", result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
-    playAudio(result.audio);
+    addHistory("중국어 답변 -> 한국어/영어 텍스트", result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
   }
 }
 
