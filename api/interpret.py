@@ -9,8 +9,8 @@ from urllib import error, request
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-TRANSCRIBE_MODEL = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
-TRANSLATE_MODEL = os.environ.get("OPENAI_TRANSLATE_MODEL", "gpt-4o-mini")
+TRANSCRIBE_MODEL = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
+TRANSLATE_MODEL = os.environ.get("OPENAI_TRANSLATE_MODEL", "gpt-4o")
 TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
 ZH_VOICE = os.environ.get("OPENAI_ZH_VOICE", "alloy")
 KO_VOICE = os.environ.get("OPENAI_KO_VOICE", "alloy")
@@ -22,8 +22,12 @@ You are a Google Meet interview interpreter.
 Classify the source text as Korean, English, Mandarin Chinese, or unclear.
 
 Rules:
-- Korean or English means the interviewer is asking. Translate it to natural Simplified Mandarin Chinese.
-- Mandarin Chinese means the interviewee is answering. Translate it to Korean and English.
+- Korean or English means the interviewer is asking. Translate it to accurate Simplified Mandarin Chinese.
+- Mandarin Chinese means the interviewee is answering. Translate it to accurate Korean and English.
+- Preserve the exact meaning, tense, aspect, modality, and whether an action is completed or currently happening.
+- Do not paraphrase into a different question. For example, "읽어보셨나요?" means "have you read/reviewed it?", not "are you reading it now?"
+- For interview consent forms, translate "동의서를 읽어보셨나요?" as asking whether the person has already read/reviewed the consent form.
+- Prefer faithful interpretation over elegant wording. Keep legal/interview wording precise.
 - Return only compact JSON.
 - Use this schema for Korean/English:
   {"direction":"ko_en_to_zh","original":"...","zh":"..."}

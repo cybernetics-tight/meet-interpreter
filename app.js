@@ -5,13 +5,13 @@ const statusText = document.querySelector("#statusText");
 const captureText = document.querySelector("#captureText");
 const originalText = document.querySelector("#originalText");
 const chineseText = document.querySelector("#chineseText");
+const respondentChineseText = document.querySelector("#respondentChineseText");
 const koreanText = document.querySelector("#koreanText");
-const englishText = document.querySelector("#englishText");
 const history = document.querySelector("#history");
 const includeMicInput = document.querySelector("#includeMicInput");
 
 const CHUNK_MS = 4000;
-const SPEECH_LEVEL_THRESHOLD = 0.025;
+const SPEECH_LEVEL_THRESHOLD = 0.006;
 
 let displayStream = null;
 let micStream = null;
@@ -24,6 +24,7 @@ let analyser = null;
 let analyserData = null;
 let chunkPeakLevel = 0;
 let processing = false;
+let pendingBlob = null;
 let running = false;
 let audioPlayer = null;
 
@@ -128,9 +129,23 @@ async function createMixedAudioStream() {
 
 async function playAudio(base64Audio) {
   if (!base64Audio) return;
-  if (!audioPlayer) audioPlayer = new Audio();
-  audioPlayer.src = `data:audio/mpeg;base64,${base64Audio}`;
-  await audioPlayer.play().catch(() => {});
+  if (!audioPlayer) {
+    audioPlayer = document.createElement("audio");
+    audioPlayer.autoplay = true;
+    audioPlayer.playsInline = true;
+    audioPlayer.style.display = "none";
+    document.body.appendChild(audioPlayer);
+  }
+  const bytes = Uint8Array.from(atob(base64Audio), (char) => char.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
+  audioPlayer.src = url;
+  try {
+    await audioPlayer.play();
+  } catch {
+    setStatus("음성 재생 차단됨");
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
 }
 
 function renderResult(result) {
@@ -139,27 +154,29 @@ function renderResult(result) {
     return;
   }
 
-  setText(originalText, result.original || "", "원문 없음");
-
   if (result.direction === "ko_en_to_zh") {
+    setText(originalText, result.original || "", "interviewer가 말한 내용이 표시됩니다.");
+    setText(respondentChineseText, "", "응답자가 중국어로 말한 내용이 표시됩니다.");
     setText(chineseText, result.zh || "", "중국어 번역 없음");
-    setText(koreanText, "", "interviewee의 중국어 답변이 여기에 표시됩니다.");
-    setText(englishText, "", "Chinese answers appear here in English.");
+    setText(koreanText, "", "중국어 답변의 한국어 번역이 표시됩니다.");
     addHistory("질문 -> 중국어 음성", result.original || "", `中文 ${result.zh || ""}`);
     playAudio(result.audio);
     return;
   }
 
   if (result.direction === "zh_to_ko_en") {
-    setText(chineseText, "", "중국어 답변은 한국어/영어 텍스트로 표시됩니다.");
+    setText(respondentChineseText, result.original || "", "중국어 원문 없음");
     setText(koreanText, result.ko || "", "한국어 번역 없음");
-    setText(englishText, result.en || "", "English translation unavailable.");
     addHistory("중국어 답변 -> 한국어/영어 텍스트", result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
   }
 }
 
 async function sendChunk(blob) {
-  if (!running || processing || blob.size < 1200) return;
+  if (!running || blob.size < 1200) return;
+  if (processing) {
+    pendingBlob = blob;
+    return;
+  }
   processing = true;
   setStatus("통역 중");
   try {
@@ -183,6 +200,12 @@ async function sendChunk(blob) {
     }
   } finally {
     processing = false;
+    if (running && pendingBlob) {
+      const nextBlob = pendingBlob;
+      pendingBlob = null;
+      sendChunk(nextBlob);
+      return;
+    }
     if (running && statusText.textContent !== "오류") setStatus("듣는 중");
   }
 }
@@ -249,6 +272,7 @@ function stopStableInterpreter() {
   analyserData = null;
   chunkPeakLevel = 0;
   processing = false;
+  pendingBlob = null;
 
   startButton.disabled = false;
   stopButton.disabled = true;
