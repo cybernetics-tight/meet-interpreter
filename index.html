@@ -28,9 +28,9 @@
       .captureOptions input { width: 18px; height: 18px; accent-color: var(--accent); }
       .captureOptions span { color: var(--muted); font-size: 14px; }
       .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      .panel { min-height: 220px; padding: 18px; }
-      .translations { grid-column: 1 / -1; min-height: 180px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
-      .translations h2 { grid-column: 1 / -1; }
+      .speakerColumn { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 18px; }
+      .speakerGrid { display: grid; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 420px; }
+      .panel { min-height: 190px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfd; }
       .large { font-size: 22px; line-height: 1.45; }
       .historyWrap { margin-top: 12px; padding: 18px; }
       .historyHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -39,7 +39,7 @@
       li p { margin-top: 4px; line-height: 1.45; }
       .historyMeta { color: var(--muted); font-size: 13px; font-weight: 700; }
       .tips { display: flex; gap: 12px; margin-top: 12px; padding: 14px 16px; color: var(--warn); line-height: 1.45; }
-      @media (max-width: 820px) { .topbar, .captureOptions, .tips { align-items: stretch; flex-direction: column; } .status, .columns, .translations { grid-template-columns: 1fr; } .translations { display: block; } }
+      @media (max-width: 820px) { .topbar, .captureOptions, .tips { align-items: stretch; flex-direction: column; } .status, .columns { grid-template-columns: 1fr; } .speakerGrid { min-height: 0; } }
     </style>
   </head>
   <body>
@@ -79,25 +79,31 @@
       </section>
 
       <section class="columns">
-        <article class="panel live">
-          <h2>방금 들은 내용</h2>
-          <p id="originalText" class="large muted">오디오 선택 후 말소리가 있을 때만 4초 단위로 통역합니다.</p>
-        </article>
-
-        <article class="panel speak">
-          <h2>중국어로 소리내기</h2>
-          <p id="chineseText" class="large muted">interviewer가 한국어/영어로 말하면 중국어 음성 번역을 재생합니다.</p>
-        </article>
-
-        <article class="panel translations">
-          <h2>중국어 답변 번역</h2>
-          <div class="translationBlock">
-            <span class="label">한국어</span>
-            <p id="koreanText" class="muted">interviewee의 중국어 답변이 한국어 텍스트로 표시됩니다.</p>
+        <article class="speakerColumn">
+          <h2>Interviewer</h2>
+          <div class="speakerGrid">
+            <section class="panel">
+              <span class="label">한국어/English</span>
+              <p id="originalText" class="large muted">interviewer가 말한 내용이 표시됩니다.</p>
+            </section>
+            <section class="panel">
+              <span class="label">중국어</span>
+              <p id="chineseText" class="large muted">중국어 번역을 텍스트로 표시하고 음성으로 재생합니다.</p>
+            </section>
           </div>
-          <div class="translationBlock">
-            <span class="label">English</span>
-            <p id="englishText" class="muted">Chinese answers appear here in English.</p>
+        </article>
+
+        <article class="speakerColumn">
+          <h2>응답자</h2>
+          <div class="speakerGrid">
+            <section class="panel">
+              <span class="label">중국어</span>
+              <p id="respondentChineseText" class="large muted">응답자가 중국어로 말한 내용이 표시됩니다.</p>
+            </section>
+            <section class="panel">
+              <span class="label">한국어</span>
+              <p id="koreanText" class="large muted">중국어 답변의 한국어 번역이 표시됩니다.</p>
+            </section>
           </div>
         </article>
       </section>
@@ -114,6 +120,10 @@
         <strong>사용법</strong>
         <span>Chrome에서 이 페이지와 Google Meet을 각각 열고, 오디오 선택을 누른 뒤 Meet 탭을 고르세요. 선택 창에서 탭 오디오 공유가 켜져 있어야 합니다. 내가 말하는 질문까지 잡으려면 마이크 권한도 허용하세요.</span>
       </section>
+
+      <footer class="siteFooter">
+        <span>Copyright 2026. Eunji Hong. All rights reserved.</span>
+      </footer>
     </main>
 
     <script>

@@ -152,21 +152,26 @@ button:disabled {
   gap: 12px;
 }
 
-.panel {
-  min-height: 220px;
+.speakerColumn {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
   padding: 18px;
 }
 
-.translations {
-  grid-column: 1 / -1;
-  min-height: 180px;
+.speakerGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 18px;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  min-height: 420px;
 }
 
-.translations h2 {
-  grid-column: 1 / -1;
+.panel {
+  min-height: 190px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
 }
 
 .translationBlock {
@@ -229,6 +234,13 @@ li p {
   line-height: 1.45;
 }
 
+.siteFooter {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 820px) {
   .topbar,
   .captureOptions,
@@ -238,16 +250,11 @@ li p {
   }
 
   .status,
-  .columns,
-  .translations {
+  .columns {
     grid-template-columns: 1fr;
   }
 
-  .translations {
-    display: block;
-  }
-
-  .translationBlock + .translationBlock {
-    margin-top: 14px;
+  .speakerGrid {
+    min-height: 0;
   }
 }
