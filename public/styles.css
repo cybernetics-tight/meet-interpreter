@@ -132,6 +132,17 @@ button:disabled {
   accent-color: var(--accent);
 }
 
+.captureOptions select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 700;
+}
+
 .captureOptions span {
   color: var(--muted);
   font-size: 14px;
@@ -232,6 +243,13 @@ li p {
   padding: 14px 16px;
   color: var(--warn);
   line-height: 1.45;
+}
+
+.siteFooter {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
 }
 
 @media (max-width: 820px) {

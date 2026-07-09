@@ -9,6 +9,7 @@ const respondentChineseText = document.querySelector("#respondentChineseText");
 const koreanText = document.querySelector("#koreanText");
 const history = document.querySelector("#history");
 const includeMicInput = document.querySelector("#includeMicInput");
+const chineseVariantInput = document.querySelector("#chineseVariantInput");
 
 const CHUNK_MS = 4000;
 const SPEECH_LEVEL_THRESHOLD = 0.006;
@@ -55,6 +56,14 @@ function addHistory(kind, original, primary, secondary = "") {
     ${secondary ? `<p>${escapeHtml(secondary)}</p>` : ""}
   `;
   history.prepend(item);
+}
+
+function chineseVariantLabel(value) {
+  if (value === "mainland_mandarin") return "본토 중국어";
+  if (value === "taiwan_mandarin") return "대만 중국어";
+  if (value === "cantonese") return "광동어";
+  if (chineseVariantInput && chineseVariantInput.value !== "auto") return chineseVariantLabel(chineseVariantInput.value);
+  return "중국어";
 }
 
 function pickMimeType() {
@@ -165,9 +174,10 @@ function renderResult(result) {
   }
 
   if (result.direction === "zh_to_ko_en") {
-    setText(respondentChineseText, result.original || "", "중국어 원문 없음");
+    const label = chineseVariantLabel(result.zh_variant);
+    setText(respondentChineseText, result.original ? `[${label}] ${result.original}` : "", "중국어 원문 없음");
     setText(koreanText, result.ko || "", "한국어 번역 없음");
-    addHistory("중국어 답변 -> 한국어/영어 텍스트", result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
+    addHistory(`${label} 답변 -> 한국어/영어 텍스트`, result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
   }
 }
 
@@ -182,6 +192,7 @@ async function sendChunk(blob) {
   try {
     const form = new FormData();
     form.append("audio", blob, "chunk.webm");
+    form.append("chinese_variant", chineseVariantInput.value || "auto");
     const response = await fetch("/api/interpret", {
       method: "POST",
       body: form,
@@ -248,6 +259,7 @@ async function startStableInterpreter() {
   startButton.disabled = true;
   stopButton.disabled = false;
   includeMicInput.disabled = true;
+  chineseVariantInput.disabled = true;
   setStatus("듣는 중");
 }
 
@@ -277,6 +289,7 @@ function stopStableInterpreter() {
   startButton.disabled = false;
   stopButton.disabled = true;
   includeMicInput.disabled = false;
+  chineseVariantInput.disabled = false;
   captureText.textContent = "중지됨";
   setStatus("대기 중");
 }

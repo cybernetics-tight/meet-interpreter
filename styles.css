@@ -132,6 +132,17 @@ button:disabled {
   accent-color: var(--accent);
 }
 
+.captureOptions select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 700;
+}
+
 .captureOptions span {
   color: var(--muted);
   font-size: 14px;
