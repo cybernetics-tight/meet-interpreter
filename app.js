@@ -12,7 +12,7 @@ const includeMicInput = document.querySelector("#includeMicInput");
 const chineseVariantInput = document.querySelector("#chineseVariantInput");
 
 const CHUNK_MS = 4000;
-const SPEECH_LEVEL_THRESHOLD = 0.006;
+const SPEECH_LEVEL_THRESHOLD = 0.012;
 
 let displayStream = null;
 let micStream = null;

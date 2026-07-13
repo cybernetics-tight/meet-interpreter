@@ -19,7 +19,7 @@ KO_VOICE = os.environ.get("OPENAI_KO_VOICE", "alloy")
 TRANSCRIBE_PROMPT = """
 This is a Google Meet interview with Korean, English, Mandarin Chinese, Taiwan Mandarin, Mainland Mandarin, and Cantonese speakers.
 Common domain terms include interview, job interview, research interview, consent form, agreement, personal information, recording, participation, and schedule.
-Keep tense and aspect precise. In Korean, distinguish "읽어보셨나요" from "읽고 계신가요".
+If the audio is silence, background noise, or only faint echo, return an empty transcription. Do not invent text from this prompt.
 """.strip()
 
 
