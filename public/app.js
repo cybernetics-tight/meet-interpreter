@@ -15,19 +15,25 @@ const sourceLanguageLabel = document.querySelector("#sourceLanguageLabel");
 const targetChineseLabel = document.querySelector("#targetChineseLabel");
 const respondentLanguageLabel = document.querySelector("#respondentLanguageLabel");
 
-const CHUNK_MS = 4000;
-const SPEECH_LEVEL_THRESHOLD = 0.012;
+const SPEECH_LEVEL_THRESHOLD = 0.018;
+const SPEECH_CHECK_MS = 100;
+const SPEECH_START_MS = 300;
+const SILENCE_END_MS = 900;
+const MAX_UTTERANCE_MS = 15000;
 
 let displayStream = null;
 let micStream = null;
 let audioContext = null;
 let mixedStream = null;
 let recorder = null;
-let chunkTimer = null;
-let volumeTimer = null;
+let speechMonitorTimer = null;
 let analyser = null;
 let analyserData = null;
-let chunkPeakLevel = 0;
+let currentChunks = [];
+let isRecordingUtterance = false;
+let speechMs = 0;
+let silenceMs = 0;
+let utteranceStartedAt = 0;
 let processing = false;
 let pendingBlob = null;
 let running = false;
@@ -91,20 +97,24 @@ function connectAudioSource(source, destination) {
   if (analyser) source.connect(analyser);
 }
 
-function updatePeakLevel() {
-  if (!analyser || !analyserData) return;
+function readAudioLevel() {
+  if (!analyser || !analyserData) return 0;
   analyser.getByteTimeDomainData(analyserData);
-  let peak = 0;
+  let sum = 0;
   for (const value of analyserData) {
-    peak = Math.max(peak, Math.abs(value - 128) / 128);
+    const centered = (value - 128) / 128;
+    sum += centered * centered;
   }
-  chunkPeakLevel = Math.max(chunkPeakLevel, peak);
+  return Math.sqrt(sum / analyserData.length);
 }
 
 async function createMixedAudioStream() {
   setStatus("Meet 탭 선택 대기");
   displayStream = await navigator.mediaDevices.getDisplayMedia({
     video: true,
+    systemAudio: "include",
+    windowAudio: "system",
+    surfaceSwitching: "include",
     audio: {
       echoCancellation: false,
       noiseSuppression: false,
@@ -197,7 +207,7 @@ function renderResult(result) {
 }
 
 async function sendChunk(blob) {
-  if (!running || blob.size < 1200) return;
+  if (!running || blob.size < 2500) return;
   if (processing) {
     pendingBlob = blob;
     return;
@@ -237,32 +247,62 @@ async function sendChunk(blob) {
   }
 }
 
-function recordNextChunk() {
-  if (!running || !mixedStream) return;
-
+function startUtteranceRecorder() {
+  if (!running || !mixedStream || isRecordingUtterance) return;
   const mimeType = pickMimeType();
-  const chunks = [];
-  chunkPeakLevel = 0;
+  currentChunks = [];
+  isRecordingUtterance = true;
+  utteranceStartedAt = Date.now();
   recorder = new MediaRecorder(mixedStream, mimeType ? { mimeType } : undefined);
   recorder.addEventListener("dataavailable", (event) => {
-    if (event.data && event.data.size > 0) chunks.push(event.data);
+    if (event.data && event.data.size > 0) currentChunks.push(event.data);
   });
   recorder.addEventListener("stop", () => {
-    if (volumeTimer) window.clearInterval(volumeTimer);
-    volumeTimer = null;
-    if (chunks.length && chunkPeakLevel >= SPEECH_LEVEL_THRESHOLD) {
+    isRecordingUtterance = false;
+    if (running && currentChunks.length) {
       const type = recorder.mimeType || mimeType || "audio/webm";
-      sendChunk(new Blob(chunks, { type }));
-    } else if (running) {
-      setStatus("조용함 감지");
+      sendChunk(new Blob(currentChunks, { type }));
     }
-    if (running) chunkTimer = window.setTimeout(recordNextChunk, 120);
+    currentChunks = [];
   });
-  recorder.start();
-  volumeTimer = window.setInterval(updatePeakLevel, 200);
-  chunkTimer = window.setTimeout(() => {
-    if (recorder && recorder.state === "recording") recorder.stop();
-  }, CHUNK_MS);
+  recorder.start(250);
+  setStatus("말 듣는 중");
+}
+
+function stopUtteranceRecorder() {
+  if (recorder && recorder.state === "recording") recorder.stop();
+}
+
+function monitorSpeech() {
+  if (!running) return;
+  const level = readAudioLevel();
+  const hasSpeech = level >= SPEECH_LEVEL_THRESHOLD;
+
+  if (hasSpeech) {
+    speechMs += SPEECH_CHECK_MS;
+    silenceMs = 0;
+    if (!isRecordingUtterance && speechMs >= SPEECH_START_MS) {
+      startUtteranceRecorder();
+    }
+  } else {
+    speechMs = 0;
+    if (isRecordingUtterance) {
+      silenceMs += SPEECH_CHECK_MS;
+      if (silenceMs >= SILENCE_END_MS) {
+        stopUtteranceRecorder();
+        silenceMs = 0;
+      }
+    } else {
+      setStatus("듣는 중");
+    }
+  }
+
+  if (isRecordingUtterance && Date.now() - utteranceStartedAt >= MAX_UTTERANCE_MS) {
+    stopUtteranceRecorder();
+    silenceMs = 0;
+  }
+
+  speechMonitorTimer = window.setTimeout(monitorSpeech, SPEECH_CHECK_MS);
 }
 
 async function startStableInterpreter() {
@@ -270,7 +310,9 @@ async function startStableInterpreter() {
   mixedStream = await createMixedAudioStream();
   running = true;
 
-  recordNextChunk();
+  speechMs = 0;
+  silenceMs = 0;
+  monitorSpeech();
 
   startButton.disabled = true;
   stopButton.disabled = false;
@@ -282,8 +324,7 @@ async function startStableInterpreter() {
 
 function stopStableInterpreter() {
   running = false;
-  if (chunkTimer) window.clearTimeout(chunkTimer);
-  if (volumeTimer) window.clearInterval(volumeTimer);
+  if (speechMonitorTimer) window.clearTimeout(speechMonitorTimer);
   if (recorder && recorder.state !== "inactive") recorder.stop();
   if (displayStream) displayStream.getTracks().forEach((track) => track.stop());
   if (micStream) micStream.getTracks().forEach((track) => track.stop());
@@ -295,11 +336,14 @@ function stopStableInterpreter() {
   mixedStream = null;
   audioContext = null;
   recorder = null;
-  chunkTimer = null;
-  volumeTimer = null;
+  speechMonitorTimer = null;
   analyser = null;
   analyserData = null;
-  chunkPeakLevel = 0;
+  currentChunks = [];
+  isRecordingUtterance = false;
+  speechMs = 0;
+  silenceMs = 0;
+  utteranceStartedAt = 0;
   processing = false;
   pendingBlob = null;
 
