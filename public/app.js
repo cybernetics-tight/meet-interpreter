@@ -9,9 +9,14 @@ const respondentChineseText = document.querySelector("#respondentChineseText");
 const koreanText = document.querySelector("#koreanText");
 const history = document.querySelector("#history");
 const includeMicInput = document.querySelector("#includeMicInput");
+const sourceLanguageInput = document.querySelector("#sourceLanguageInput");
+const targetChineseInput = document.querySelector("#targetChineseInput");
+const sourceLanguageLabel = document.querySelector("#sourceLanguageLabel");
+const targetChineseLabel = document.querySelector("#targetChineseLabel");
+const respondentLanguageLabel = document.querySelector("#respondentLanguageLabel");
 
 const CHUNK_MS = 4000;
-const SPEECH_LEVEL_THRESHOLD = 0.006;
+const SPEECH_LEVEL_THRESHOLD = 0.012;
 
 let displayStream = null;
 let micStream = null;
@@ -55,6 +60,25 @@ function addHistory(kind, original, primary, secondary = "") {
     ${secondary ? `<p>${escapeHtml(secondary)}</p>` : ""}
   `;
   history.prepend(item);
+}
+
+function sourceLanguageName(value) {
+  if (value === "ko") return "Korean";
+  if (value === "en") return "English";
+  return "Korean / English";
+}
+
+function targetChineseName(value) {
+  if (value === "zh-TW") return "Taiwan Mandarin / zh-TW";
+  return "Traditional Chinese / zh-Hant";
+}
+
+function syncLanguageLabels() {
+  const sourceName = sourceLanguageName(sourceLanguageInput.value);
+  const targetName = targetChineseName(targetChineseInput.value);
+  sourceLanguageLabel.textContent = sourceName;
+  targetChineseLabel.textContent = targetName;
+  respondentLanguageLabel.textContent = targetName;
 }
 
 function pickMimeType() {
@@ -165,9 +189,10 @@ function renderResult(result) {
   }
 
   if (result.direction === "zh_to_ko_en") {
-    setText(respondentChineseText, result.original || "", "중국어 원문 없음");
+    const label = targetChineseName(result.target_language || targetChineseInput.value);
+    setText(respondentChineseText, result.original ? `[${label}] ${result.original}` : "", "중국어 원문 없음");
     setText(koreanText, result.ko || "", "한국어 번역 없음");
-    addHistory("중국어 답변 -> 한국어/영어 텍스트", result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
+    addHistory(`${label} 답변 -> 한국어/영어 텍스트`, result.original || "", `한국어 ${result.ko || ""}`, `English ${result.en || ""}`);
   }
 }
 
@@ -182,6 +207,8 @@ async function sendChunk(blob) {
   try {
     const form = new FormData();
     form.append("audio", blob, "chunk.webm");
+    form.append("source_language", sourceLanguageInput.value || "ko_en");
+    form.append("target_chinese", targetChineseInput.value || "zh-Hant");
     const response = await fetch("/api/interpret", {
       method: "POST",
       body: form,
@@ -248,6 +275,8 @@ async function startStableInterpreter() {
   startButton.disabled = true;
   stopButton.disabled = false;
   includeMicInput.disabled = true;
+  sourceLanguageInput.disabled = true;
+  targetChineseInput.disabled = true;
   setStatus("듣는 중");
 }
 
@@ -277,6 +306,8 @@ function stopStableInterpreter() {
   startButton.disabled = false;
   stopButton.disabled = true;
   includeMicInput.disabled = false;
+  sourceLanguageInput.disabled = false;
+  targetChineseInput.disabled = false;
   captureText.textContent = "중지됨";
   setStatus("대기 중");
 }
@@ -298,3 +329,6 @@ stopButton.addEventListener("click", stopStableInterpreter);
 clearButton.addEventListener("click", () => {
   history.replaceChildren();
 });
+sourceLanguageInput.addEventListener("change", syncLanguageLabels);
+targetChineseInput.addEventListener("change", syncLanguageLabels);
+syncLanguageLabels();

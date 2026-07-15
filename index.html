@@ -77,12 +77,18 @@
           내 마이크도 같이 듣기
         </label>
         <label>
-          중국어 종류
-          <select id="chineseVariantInput">
-            <option value="auto">자동</option>
-            <option value="mainland_mandarin">본토 중국어</option>
-            <option value="taiwan_mandarin">대만 중국어</option>
-            <option value="cantonese">광동어</option>
+          언어 1
+          <select id="sourceLanguageInput">
+            <option value="ko_en">Korean / English</option>
+            <option value="ko">Korean</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label>
+          언어 2
+          <select id="targetChineseInput">
+            <option value="zh-Hant">Traditional Chinese / zh-Hant</option>
+            <option value="zh-TW">Taiwan Mandarin / zh-TW</option>
           </select>
         </label>
         <span>시작 전에 선택하세요. 내가 interviewer로 말하는 경우 이 옵션이 켜져 있어야 질문을 인식합니다.</span>
@@ -93,11 +99,11 @@
           <h2>Interviewer</h2>
           <div class="speakerGrid">
             <section class="panel">
-              <span class="label">한국어/English</span>
+              <span id="sourceLanguageLabel" class="label">Korean / English</span>
               <p id="originalText" class="large muted">interviewer가 말한 내용이 표시됩니다.</p>
             </section>
             <section class="panel">
-              <span class="label">중국어</span>
+              <span id="targetChineseLabel" class="label">Traditional Chinese / zh-Hant</span>
               <p id="chineseText" class="large muted">중국어 번역을 텍스트로 표시하고 음성으로 재생합니다.</p>
             </section>
           </div>
@@ -107,7 +113,7 @@
           <h2>응답자</h2>
           <div class="speakerGrid">
             <section class="panel">
-              <span class="label">중국어</span>
+              <span id="respondentLanguageLabel" class="label">Traditional Chinese / zh-Hant</span>
               <p id="respondentChineseText" class="large muted">응답자가 중국어로 말한 내용이 표시됩니다.</p>
             </section>
             <section class="panel">

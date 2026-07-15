@@ -26,23 +26,26 @@ If the audio is silence, background noise, or only faint echo, return an empty t
 TRANSLATE_SYSTEM = """
 You are a Google Meet interview interpreter.
 
-Classify the source text as Korean, English, Mandarin Chinese, Cantonese, or unclear.
+Classify the source text as interviewer speech or respondent speech.
 
 Rules:
-- Korean or English means the interviewer is asking. Translate it to accurate Simplified Mandarin Chinese.
-- Mandarin Chinese or Cantonese means the interviewee is answering. Translate it to accurate Korean and English.
+- The user selects language 1 and language 2 before the session starts.
+- Language 1 is the interviewer language: Korean, English, or Korean/English.
+- Language 2 is the respondent language and the Chinese output language: Traditional Chinese / zh-Hant or Taiwan Mandarin / zh-TW.
+- If the transcript is in language 1, translate it to accurate language 2 Chinese.
+- If the transcript is Chinese, treat it as respondent speech and translate it to accurate Korean and English.
 - Preserve the exact meaning, tense, aspect, modality, and whether an action is completed or currently happening.
 - Do not paraphrase into a different question. For example, "읽어보셨나요?" means "have you read/reviewed it?", not "are you reading it now?"
 - For interview consent forms, translate "동의서를 읽어보셨나요?" as asking whether the person has already read/reviewed the consent form.
 - Prefer faithful interpretation over elegant wording. Keep legal/interview wording precise.
-- When source is Chinese, classify the variety as one of: "mainland_mandarin", "taiwan_mandarin", "cantonese", or "uncertain".
-- Use vocabulary clues carefully: "視頻/信息/普通话" often suggests Mainland; "影片/資訊/國語" often suggests Taiwan; Cantonese particles or Cantonese wording can suggest Cantonese.
-- If the transcript is in Simplified or Traditional characters, preserve the original script in "original".
+- For zh-Hant output, use Traditional Chinese characters and neutral Mandarin wording. Do not output Simplified Chinese.
+- For zh-TW output, use Traditional Chinese characters and natural Taiwan Mandarin wording. Prefer Taiwan terms such as 資訊, 影片, 國語 when appropriate. Do not output Simplified Chinese.
+- Preserve the original Chinese script in "original" when respondent speech is Chinese.
 - Return only compact JSON.
 - Use this schema for Korean/English:
-  {"direction":"ko_en_to_zh","original":"...","zh":"..."}
+  {"direction":"ko_en_to_zh","target_language":"zh-Hant|zh-TW","original":"...","zh":"..."}
 - Use this schema for Chinese:
-  {"direction":"zh_to_ko_en","zh_variant":"mainland_mandarin|taiwan_mandarin|cantonese|uncertain","original":"...","ko":"...","en":"..."}
+  {"direction":"zh_to_ko_en","target_language":"zh-Hant|zh-TW","original":"...","ko":"...","en":"..."}
 - If the text is empty, noise, or too unclear:
   {"direction":"skip","original":""}
 - Preserve questions as questions. Do not invent details.
@@ -132,31 +135,34 @@ def transcribe(audio):
     return (payload.get("text") or "").strip()
 
 
-VARIANT_LABELS = {
-    "auto": "auto-detect",
-    "mainland_mandarin": "Mainland Mandarin Chinese",
-    "taiwan_mandarin": "Taiwan Mandarin Chinese",
-    "cantonese": "Cantonese",
+SOURCE_LANGUAGE_LABELS = {
+    "ko_en": "Korean or English",
+    "ko": "Korean",
+    "en": "English",
 }
 
 
-def translate(transcript, chinese_variant="auto"):
-    variant = chinese_variant if chinese_variant in VARIANT_LABELS else "auto"
-    if variant == "auto":
-        variant_instruction = "Chinese variety mode: auto-detect mainland_mandarin, taiwan_mandarin, cantonese, or uncertain."
-    else:
-        variant_instruction = (
-            f"Chinese variety mode: the user selected {VARIANT_LABELS[variant]}. "
-            f"Do not auto-detect. Treat Chinese source speech as {variant}. "
-            f"For Korean/English interviewer speech, translate into {VARIANT_LABELS[variant]} style."
-        )
+TARGET_CHINESE_LABELS = {
+    "zh-Hant": "Traditional Chinese / zh-Hant",
+    "zh-TW": "Taiwan Mandarin / zh-TW",
+}
+
+
+def translate(transcript, source_language="ko_en", target_chinese="zh-Hant"):
+    source = source_language if source_language in SOURCE_LANGUAGE_LABELS else "ko_en"
+    target = target_chinese if target_chinese in TARGET_CHINESE_LABELS else "zh-Hant"
+    language_instruction = (
+        f"Language 1: {SOURCE_LANGUAGE_LABELS[source]}.\n"
+        f"Language 2: {TARGET_CHINESE_LABELS[target]}.\n"
+        "Do not auto-select a different Chinese target. Use the selected language 2 style exactly."
+    )
     payload = {
         "model": TRANSLATE_MODEL,
         "temperature": 0,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": TRANSLATE_SYSTEM},
-            {"role": "user", "content": f"{variant_instruction}\n\nTranscript:\n{transcript}"},
+            {"role": "user", "content": f"{language_instruction}\n\nTranscript:\n{transcript}"},
         ],
     }
     data = openai_request_json("https://api.openai.com/v1/chat/completions", payload)
@@ -187,14 +193,15 @@ def synthesize(text, voice):
         return base64.b64encode(resp.read()).decode("ascii")
 
 
-def interpret(audio, chinese_variant="auto"):
+def interpret(audio, source_language="ko_en", target_chinese="zh-Hant"):
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     transcript = transcribe(audio)
     if len(transcript) < 2:
         return {"direction": "skip", "original": ""}
-    result = translate(transcript, chinese_variant)
+    result = translate(transcript, source_language, target_chinese)
     result["original"] = result.get("original") or transcript
+    result["target_language"] = result.get("target_language") or target_chinese
     if result.get("direction") == "ko_en_to_zh":
         result["audio"] = synthesize(result.get("zh", ""), ZH_VOICE)
     return result
@@ -206,10 +213,11 @@ class handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             fields = parse_multipart(self.headers, self.rfile.read(length))
             audio = fields.get("audio")
-            chinese_variant = fields.get("chinese_variant", {}).get("data", b"auto").decode("utf-8", "replace")
+            source_language = fields.get("source_language", {}).get("data", b"ko_en").decode("utf-8", "replace")
+            target_chinese = fields.get("target_chinese", {}).get("data", b"zh-Hant").decode("utf-8", "replace")
             if not audio or not audio["data"]:
                 raise RuntimeError("Audio file is missing.")
-            payload = interpret(audio, chinese_variant)
+            payload = interpret(audio, source_language, target_chinese)
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
